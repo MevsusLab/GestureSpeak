@@ -1,0 +1,4 @@
+-r requirements.txt
+requests==2.32.5
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.8.0+cpu
