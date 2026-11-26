@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 
 from app import Speech, create_app
+from features import LABELS
 from recognition import Recognizer
 
 
@@ -54,7 +55,19 @@ class AppTests(unittest.TestCase):
                         sequence.append(letter)
         finally:
             capture.release()
-        self.assertEqual("".join(sequence), "МИР")
+        self.assertEqual("".join(sequence), "ПРИВЕТ")
+
+    def test_every_supported_letter_has_a_video_guide(self):
+        self.assertEqual(self.recognizer.classifier.labels, LABELS)
+        url = "http://127.0.0.1"
+        with self.client.get("/", base_url=url) as page:
+            html = page.get_data(as_text=True)
+            for letter in LABELS[:-1]:
+                with self.subTest(letter=letter):
+                    self.assertIn(f'data-letter="{letter}"', html)
+                    with self.client.get(f"/static/signs/{letter}.mp4", base_url=url) as example:
+                        self.assertEqual(example.status_code, 200)
+                        self.assertEqual(example.mimetype, "video/mp4")
 
     def test_rejects_bad_frames_and_cross_origin_posts(self):
         url = "http://127.0.0.1"

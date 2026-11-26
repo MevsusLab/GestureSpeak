@@ -91,7 +91,7 @@ def clip_bytes(member):
     return decoded
 
 
-def extract(row, member, demo_folder):
+def extract(member, example):
     if not hasattr(LOCAL, "tracker"):
         options = mp.tasks.vision.HandLandmarkerOptions(
             base_options=mp.tasks.BaseOptions(model_asset_path=str(ROOT / "assets" / "hand_landmarker.task")),
@@ -99,7 +99,8 @@ def extract(row, member, demo_folder):
         )
         LOCAL.tracker = mp.tasks.vision.HandLandmarker.create_from_options(options)
 
-    with NamedTemporaryFile(suffix=".mp4", delete=False) as file:
+    directory = example.parent if example else None
+    with NamedTemporaryFile(suffix=".mp4", dir=directory, delete=False) as file:
         path = Path(file.name)
     try:
         path.write_bytes(clip_bytes(member))
@@ -125,9 +126,8 @@ def extract(row, member, demo_folder):
                         points.append(hand)
         finally:
             capture.release()
-        if demo_folder and row["text"] in LABELS[:-1] and row["train"] == "False" and len(points) >= 4:
-            demo_folder.mkdir(parents=True, exist_ok=True)
-            path.replace(demo_folder / member.filename.rsplit("/", 1)[-1])
+        if example and len(points) >= 4:
+            path.replace(example)
         return np.array(points, dtype=np.float32).reshape(-1, 21, 3)
     finally:
         path.unlink(missing_ok=True)
@@ -166,20 +166,31 @@ def main():
     rng.shuffle(selection)
     print(f"{len(selection)} videos across {len(groups) // 2} letters", flush=True)
 
+    demo_folder = folder / "test-videos" if args.save_test_videos else None
+    if demo_folder:
+        demo_folder.mkdir(exist_ok=True)
     failures = 0
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
-        demo_folder = folder / "test-videos" if args.save_test_videos else None
-        jobs = {pool.submit(extract, row, clip, demo_folder): row for row, clip in selection
-                if not (records / f'{row["attachment_id"]}.npy').exists()}
+        jobs = {}
+        for row, clip in selection:
+            clip_id = row["attachment_id"]
+            record = records / f"{clip_id}.npy"
+            example = None
+            if demo_folder and row["text"] in LABELS[:-1] and row["train"] == "False":
+                example = demo_folder / f"{clip_id}.mp4"
+            if record.exists():
+                if example is None or example.exists() or len(np.load(record, allow_pickle=False)) < 4:
+                    continue
+            jobs[pool.submit(extract, clip, example)] = record
         for index, job in enumerate(as_completed(jobs), start=1):
-            row = jobs[job]
+            record = jobs[job]
             try:
                 points = job.result()
-                np.save(records / f'{row["attachment_id"]}.npy', points, allow_pickle=False)
+                np.save(record, points, allow_pickle=False)
             except Exception as error:
                 failures += 1
                 if failures <= 12:
-                    print(f'{row["attachment_id"]}: {error}', flush=True)
+                    print(f"{record.stem}: {error}", flush=True)
             if index % 20 == 0:
                 print(f"Processed {index}/{len(jobs)} (errors: {failures})", flush=True)
 

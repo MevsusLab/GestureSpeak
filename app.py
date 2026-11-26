@@ -14,7 +14,6 @@ from flask import Flask, abort, jsonify, render_template, request, send_file
 from PIL import Image, UnidentifiedImageError
 from waitress import create_server
 
-from features import LABELS
 from recognition import ASSETS, Recognizer
 
 
@@ -65,7 +64,8 @@ def create_app(recognizer, speech, host):
 
     @app.get("/")
     def index():
-        return render_template("index.html", letters=LABELS[:-1], threshold=recognizer.classifier.threshold)
+        classifier = recognizer.classifier
+        return render_template("index.html", letters=classifier.labels[:-1], threshold=classifier.threshold)
 
     @app.post("/api/frame")
     def frame():
@@ -97,7 +97,7 @@ def create_app(recognizer, speech, host):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="HelpRominu | РЖЯ в текст и голос")
+    parser = argparse.ArgumentParser(description="GestureSpeak | РЖЯ в текст и голос")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--open", action="store_true", help="open the browser after listening")
     parser.add_argument("--lan-address", help="private IPv4 of this computer for a phone connection")
@@ -138,7 +138,7 @@ def main():
             run = server.run
         protocol = "https" if args.lan_address else "http"
         url = f"{protocol}://{host}:{args.port}/"
-        print(f"HelpRominu: {url}", flush=True)
+        print(f"GestureSpeak: {url}", flush=True)
         try:
             if args.open:
                 threading.Thread(target=webbrowser.open, args=(url,), daemon=True).start()

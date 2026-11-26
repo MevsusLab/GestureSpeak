@@ -4,6 +4,8 @@ const byId = (id) => document.getElementById(id);
 const cameraButton = byId("camera");
 const startButton = byId("start");
 const demoButton = byId("demo");
+const openVideoButton = byId("open-video");
+const videoFile = byId("video-file");
 const device = byId("device");
 const video = byId("video");
 const viewer = byId("viewer");
@@ -26,6 +28,7 @@ const fingers = [
 ];
 
 let active = null;
+let videoUrl = null;
 let voice = null;
 let requestId = 0;
 let lastRateCount = 0;
@@ -73,7 +76,7 @@ function draw(points, width, height) {
   ink.lineWidth = Math.max(2, width / 240);
   ink.lineJoin = "round";
   ink.lineCap = "round";
-  ink.strokeStyle = "#baf5ab";
+  ink.strokeStyle = "#6db1ff";
   for (const finger of fingers) {
     ink.beginPath();
     for (const [index, joint] of finger.entries()) {
@@ -83,7 +86,7 @@ function draw(points, width, height) {
     }
     ink.stroke();
   }
-  ink.fillStyle = "#f4ffec";
+  ink.fillStyle = "#f2f7ff";
   for (const [x, y] of points) {
     ink.beginPath();
     ink.arc(x * width, y * height, Math.max(2.2, width / 220), 0, Math.PI * 2);
@@ -112,13 +115,16 @@ function endSource(message = "Камера выключена", error = false) {
   video.srcObject = null;
   video.removeAttribute("src");
   video.load();
+  if (videoUrl) {
+    URL.revokeObjectURL(videoUrl);
+    videoUrl = null;
+  }
   viewer.hidden = true;
   placeholder.hidden = false;
   byId("live").hidden = true;
   cameraButton.hidden = true;
   device.hidden = true;
   startButton.disabled = false;
-  byId("camera-note").textContent = "Разрешите доступ к камере в браузере";
   byId("fps").textContent = "";
   gate.reset();
   ink.clearRect(0, 0, overlay.width, overlay.height);
@@ -138,11 +144,15 @@ async function listCameras(id, selected) {
   }
 }
 
-async function startSource(kind) {
+async function startSource(kind, file = null) {
   endSource();
   const id = requestId;
   startButton.disabled = true;
-  status(kind === "camera" ? "Подключаем камеру…" : "Загружаем демо…");
+  status({
+    camera: "Подключаем камеру…",
+    demo: "Загружаем демо…",
+    file: "Открываем видео…",
+  }[kind]);
   try {
     if (kind === "camera") {
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -168,6 +178,9 @@ async function startSource(kind) {
           if (requestId === id) endSource("Камера отключилась.", true);
         });
       }
+    } else if (file) {
+      videoUrl = URL.createObjectURL(file);
+      video.src = videoUrl;
     } else {
       video.src = "/static/demo.mp4";
     }
@@ -177,7 +190,11 @@ async function startSource(kind) {
     viewer.hidden = false;
     placeholder.hidden = true;
     byId("live").hidden = false;
-    byId("source-name").textContent = kind === "camera" ? "Камера включена" : "Видео из Bukva";
+    byId("source-name").textContent = {
+      camera: "Камера включена",
+      demo: "Видео из Bukva",
+      file: "Видеофайл",
+    }[kind];
     cameraButton.hidden = false;
     active = { kind, controller: new AbortController(), timer: 0, lastVideoTime: -1 };
     if (kind === "camera") listCameras(id, video.srcObject.getVideoTracks()[0].getSettings().deviceId);
@@ -192,8 +209,12 @@ async function startSource(kind) {
       NotFoundError: "Камера не найдена. Подключите устройство и повторите.",
       NotReadableError: "Камера занята или недоступна. Закройте другие приложения с камерой.",
     };
-    endSource(kind === "demo" ? "Не удалось открыть демовидео." :
-      (cameraErrors[error.name] || "Не удалось подключить камеру."), true);
+    const errors = {
+      camera: cameraErrors[error.name] || "Не удалось подключить камеру.",
+      demo: "Не удалось открыть демовидео.",
+      file: "Браузер не смог открыть файл. Попробуйте видео в формате MP4 или WebM.",
+    };
+    endSource(errors[kind], true);
   }
 }
 
@@ -313,10 +334,20 @@ async function playVoice() {
 
 startButton.addEventListener("click", () => startSource("camera"));
 demoButton.addEventListener("click", () => startSource("demo"));
+openVideoButton.addEventListener("click", () => videoFile.click());
+videoFile.addEventListener("change", () => {
+  const file = videoFile.files[0];
+  videoFile.value = "";
+  if (file) startSource("file", file);
+});
 cameraButton.addEventListener("click", () => endSource());
 device.addEventListener("change", () => startSource("camera"));
 video.addEventListener("ended", () => {
   if (active?.kind === "demo") endSource("Демо завершено");
+  else if (active?.kind === "file") endSource("Видео обработано");
+});
+video.addEventListener("error", () => {
+  if (active?.kind === "file") endSource("Видео не удалось прочитать до конца.", true);
 });
 auto.addEventListener("change", () => {
   insert.hidden = auto.checked;

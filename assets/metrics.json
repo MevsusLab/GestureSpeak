@@ -1,25 +1,50 @@
 {
   "threshold": 0.55,
-  "fit_clips": 620,
-  "validation_clips": 150,
-  "test_clips": 277,
+  "fit_clips": 1030,
+  "validation_clips": 270,
+  "test_clips": 428,
   "test_signers": 20,
-  "test_supported_clips": 186,
-  "test_supported_top1": 0.8333333333333334,
-  "test_supported_correct_accepted": 132,
-  "test_supported_wrong_accepted": 4,
-  "test_unknown_clips": 91,
-  "test_unknown_false_accepts": 7,
+  "test_supported_clips": 376,
+  "test_supported_top1": 0.8271276595744681,
+  "test_supported_correct_accepted": 275,
+  "test_supported_wrong_accepted": 8,
+  "test_unknown_clips": 52,
+  "test_unknown_false_accepts": 12,
   "per_letter": {
     "А": {
       "clips": 19,
-      "top1_correct": 18,
+      "top1_correct": 17,
       "correct_accepted": 17
     },
-    "Д": {
-      "clips": 17,
+    "Б": {
+      "clips": 19,
+      "top1_correct": 16,
+      "correct_accepted": 16
+    },
+    "В": {
+      "clips": 19,
+      "top1_correct": 18,
+      "correct_accepted": 18
+    },
+    "Г": {
+      "clips": 19,
       "top1_correct": 17,
-      "correct_accepted": 8
+      "correct_accepted": 13
+    },
+    "Д": {
+      "clips": 18,
+      "top1_correct": 12,
+      "correct_accepted": 4
+    },
+    "Е": {
+      "clips": 17,
+      "top1_correct": 14,
+      "correct_accepted": 12
+    },
+    "Ж": {
+      "clips": 18,
+      "top1_correct": 14,
+      "correct_accepted": 13
     },
     "И": {
       "clips": 19,
@@ -28,11 +53,11 @@
     },
     "К": {
       "clips": 19,
-      "top1_correct": 16,
+      "top1_correct": 15,
       "correct_accepted": 12
     },
     "М": {
-      "clips": 18,
+      "clips": 19,
       "top1_correct": 11,
       "correct_accepted": 9
     },
@@ -44,22 +69,47 @@
     "П": {
       "clips": 19,
       "top1_correct": 15,
-      "correct_accepted": 13
+      "correct_accepted": 14
     },
     "Р": {
-      "clips": 18,
-      "top1_correct": 16,
-      "correct_accepted": 14
+      "clips": 19,
+      "top1_correct": 17,
+      "correct_accepted": 15
     },
     "С": {
       "clips": 19,
-      "top1_correct": 16,
-      "correct_accepted": 15
+      "top1_correct": 17,
+      "correct_accepted": 16
     },
     "Т": {
       "clips": 19,
+      "top1_correct": 12,
+      "correct_accepted": 9
+    },
+    "У": {
+      "clips": 19,
+      "top1_correct": 18,
+      "correct_accepted": 18
+    },
+    "Ф": {
+      "clips": 19,
+      "top1_correct": 17,
+      "correct_accepted": 15
+    },
+    "Х": {
+      "clips": 19,
+      "top1_correct": 18,
+      "correct_accepted": 15
+    },
+    "Ш": {
+      "clips": 19,
+      "top1_correct": 17,
+      "correct_accepted": 16
+    },
+    "Я": {
+      "clips": 19,
       "top1_correct": 13,
-      "correct_accepted": 11
+      "correct_accepted": 10
     }
   }
 }

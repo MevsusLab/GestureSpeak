@@ -14,7 +14,12 @@ ASSETS = Path(__file__).resolve().parent / "assets"
 class Classifier:
     def __init__(self, path):
         with np.load(path, allow_pickle=False) as model:
-            if tuple(model["labels"]) != LABELS:
+            self.labels = tuple(model["labels"].tolist())
+            if (
+                not self.labels or self.labels[-1] != ""
+                or len(set(self.labels)) != len(self.labels)
+                or not set(self.labels).issubset(LABELS)
+            ):
                 raise ValueError("The classifier uses an incompatible alphabet")
             self.threshold = float(model["threshold"])
             self.mean = model["mean"]
@@ -61,6 +66,7 @@ class Recognizer:
         scores = self.classifier.probabilities(points)
         index = int(scores.argmax())
         score = float(scores[index])
-        if LABELS[index]:
-            payload.update(letter=LABELS[index], score=round(score, 4))
+        letter = self.classifier.labels[index]
+        if letter:
+            payload.update(letter=letter, score=round(score, 4))
         return payload

@@ -1,4 +1,4 @@
-"""Build the local gesture reference videos and a genuine three-letter demo from Bukva."""
+"""Build gesture reference videos and a fingerspelling demo from Bukva."""
 
 import os
 import subprocess
@@ -10,13 +10,12 @@ os.environ.setdefault("GLOG_minloglevel", "2")
 import cv2
 import numpy as np
 
-from features import LABELS
 from recognition import Recognizer
 
 
 ROOT = Path(__file__).resolve().parent
 WIDTH, HEIGHT, FPS = 640, 480, 24
-DEMO_WORD = "МИР"
+DEMO_WORD = "ПРИВЕТ"
 
 
 def frames_from(path):
@@ -81,6 +80,21 @@ def demo_segment(frames, letter, recognizer):
     return portion[:middle] + [frames[peak]] * padding + portion[middle:]
 
 
+def visible_hold(path, letter, recognizer):
+    # Check the compressed clip through the same JPEG step as the browser.
+    consecutive = 0
+    for frame in frames_from(path)[::2]:
+        _, jpg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 82])
+        result = recognizer.read(cv2.imdecode(jpg, cv2.IMREAD_COLOR))
+        if result["letter"] != letter or result["score"] < recognizer.classifier.threshold + 0.05:
+            consecutive = 0
+            continue
+        consecutive += 1
+        if consecutive >= 10:
+            return True
+    return False
+
+
 def main():
     cv2.setNumThreads(1)
     media = ROOT / ".cache" / "test-videos"
@@ -91,9 +105,9 @@ def main():
     recognizer = Recognizer()
     try:
         segments = {}
-        with TemporaryDirectory() as folder:
+        with TemporaryDirectory(dir=out.parent) as folder:
             temp = Path(folder)
-            for class_index, letter in enumerate(LABELS[:-1]):
+            for class_index, letter in enumerate(recognizer.classifier.labels[:-1]):
                 mask = (letters == letter) & ~train
                 ranking = []
                 for clip in np.unique(video_ids[mask]):
@@ -110,8 +124,12 @@ def main():
                         segment = demo_segment(frames, letter, recognizer)
                         if not segment:
                             continue
+                        test_clip = temp / "candidate.mp4"
+                        encode(segment, test_clip, temp)
+                        if not visible_hold(test_clip, letter, recognizer):
+                            continue
                         segments[letter] = segment
-                    encode(frames, out / f"{letter}.mp4", temp)
+                    encode(frames, temp / f"{letter}.mp4", temp)
                     print(f"{letter}: {path.stem}", flush=True)
                     break
                 else:
@@ -120,7 +138,11 @@ def main():
             demo = gap.copy()
             for letter in DEMO_WORD:
                 demo += segments[letter] + gap
-            encode(demo, ROOT / "static" / "demo.mp4", temp)
+            encode(demo, temp / "demo.mp4", temp)
+            for letter in recognizer.classifier.labels[:-1]:
+                example = f"{letter}.mp4"
+                (temp / example).replace(out / example)
+            (temp / "demo.mp4").replace(out.parent / "demo.mp4")
     finally:
         recognizer.close()
 

@@ -1,7 +1,7 @@
 import numpy as np
 
 
-LABELS = tuple("АДИКМОПРСТ") + ("",)
+LABELS = tuple("АБВГДЕЖИКМОПРСТУФХШЯ") + ("",)
 PAIRS = np.triu_indices(21, k=1)
 
 

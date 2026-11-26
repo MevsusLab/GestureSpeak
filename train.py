@@ -3,6 +3,7 @@
 import copy
 import json
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import numpy as np
 import torch
@@ -128,15 +129,20 @@ def main():
     weights = {f"{name}{index}": value.detach().numpy()
                for index, layer in enumerate(layers)
                for name, value in (("w", layer.weight), ("b", layer.bias))}
-    np.savez_compressed(ROOT / "assets" / "classifier.npz", mean=mean, scale=scale,
-                        labels=LABELS, threshold=np.float32(threshold), **weights)
     from recognition import Classifier
 
-    exported = Classifier(ROOT / "assets" / "classifier.npz")
-    for point, expected_probs in zip(points[:100], probabilities[:100]):
-        np.testing.assert_allclose(exported.probabilities(point), expected_probs, atol=2e-6)
     report = json.dumps(metrics, ensure_ascii=False, indent=2)
-    (ROOT / "assets" / "metrics.json").write_text(report + "\n", encoding="utf-8")
+    assets = ROOT / "assets"
+    with TemporaryDirectory(dir=assets) as folder:
+        candidate = Path(folder) / "classifier.npz"
+        np.savez_compressed(candidate, mean=mean, scale=scale, labels=LABELS, threshold=threshold, **weights)
+        exported = Classifier(candidate)
+        for point, expected_probs in zip(points[:100], probabilities[:100]):
+            np.testing.assert_allclose(exported.probabilities(point), expected_probs, atol=2e-6)
+        metrics_file = Path(folder) / "metrics.json"
+        metrics_file.write_text(report + "\n", encoding="utf-8")
+        candidate.replace(assets / candidate.name)
+        metrics_file.replace(assets / metrics_file.name)
     print(report, flush=True)
 
 
